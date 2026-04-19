@@ -42,7 +42,7 @@ st.divider()
 # واجهة تفعيل الكود
 if st.session_state.activated_code is None:
     st.subheader("🔑 أدخل كود التفعيل")
-    input_code = st.text_input("الكود", placeholder="مثال: GAME5")
+    input_code = st.text_input("الكود", placeholder="مثال: GAME00")
 
     if st.button("✅ تفعيل", use_container_width=True):
         code = input_code.strip().upper()
@@ -60,7 +60,7 @@ if st.session_state.activated_code is None:
     st.markdown("### 🛒 احصل على كود تفعيل")
     st.markdown("**باقة صغيرة** — 10 توليدات مقابل **5 ريال**")
     st.markdown("**باقة شهرية** — توليدات يومية غير محدودة مقابل **29 ريال/شهر**")
-    st.link_button("🛒 اشترِ الآن", "https://your-store.com", use_container_width=True)
+    st.link_button("🛒 اشترِ الآن", "https://salla.sa/mawjatalsamt/category/lRlwoA", use_container_width=True)
 
 else:
     # عرض الرصيد
@@ -140,7 +140,7 @@ else:
                     # تنبيه نفاد الرصيد
                     if st.session_state.code_type == "limited" and st.session_state.remaining == 0:
                         st.warning("⚠️ نفد رصيدك! اشترِ باقة جديدة للاستمرار.")
-                        st.link_button("🛒 اشترِ الآن", "https://your-store.com", use_container_width=True)
+                        st.link_button("🛒 اشترِ الآن", "https://salla.sa/mawjatalsamt/category/lRlwoA", use_container_width=True)
 
                 except Exception as e:
                     st.error(f"خطأ: {str(e)}")
