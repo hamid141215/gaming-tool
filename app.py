@@ -30,11 +30,9 @@ CODES = {
 }
 
 FONTS = {
-    "Amiri (كلاسيكي)": "Amiri-Bold.ttf",
-    "Arabtype (عريض)":  "arabtype.ttf",
-    "Tradbdo (تراثي)":  "tradbdo.ttf",
-    "Garabd (رسمي)":    "GARABD.TTF",
-    "Naskh (نسخ)":      "DTNASKH1.TTF",
+    "Amiri (كلاسيكي)":  "Amiri-Bold.ttf",
+    "Tajawal (حديث)":   "Tajawal-Bold.ttf",
+    "Lateef (أنيق)":    "Lateef-Bold.ttf",
 }
 
 COLOR_PRESETS = {
