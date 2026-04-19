@@ -102,8 +102,7 @@ if st.session_state.activated_code is None:
     st.markdown("**باقة شهرية** — 30 توليد يومياً مقابل **39 ريال/شهر**")
     st.markdown("**باقة احترافية** — 100 توليد يومياً مقابل **79 ريال/شهر**")
     st.link_button("🛒 اشترِ الآن", "https://salla.sa/mawjatalsamt/category/lRlwoA", use_container_width=True)
-    st.link_button("🛒 اشترِ الآن", "https://salla.sa/mawjatalsamt/category/lRlwoA", use_container_width=True)
-
+    
 else:
     code_info = CODES[st.session_state.activated_code]
     if st.session_state.code_type == "limited":
