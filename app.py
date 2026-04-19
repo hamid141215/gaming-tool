@@ -30,7 +30,7 @@ CODES = {
 }
 
 FONTS = {
-    "Amiri (كلاسيكي)":  "Amiri-Bold.ttf",
+    "Amiri (كلاسيكي)": "Amiri-Bold.ttf",
     "Tajawal (حديث)":   "Tajawal-Bold.ttf",
     "Lateef (أنيق)":    "Lateef-Bold.ttf",
 }
@@ -125,6 +125,15 @@ def add_text_to_image(image_bytes, text, font_name, font_size,
     sc = hex_to_rgb(shadow_color)
     border = max(3, font_size // 10)
 
+    emoji_font_path = os.path.join(BASE_DIR, "NotoEmoji.ttf")
+    try:
+        emoji_font = ImageFont.truetype(emoji_font_path, font_size)
+    except:
+        emoji_font = None
+
+    import re
+    emoji_pattern = re.compile("[\U00010000-\U0010ffff\U00002600-\U000027BF]", flags=re.UNICODE)
+
     for ln in reshaped:
         try:
             bbox = draw.textbbox((0, 0), ln, font=font)
@@ -143,7 +152,24 @@ def add_text_to_image(image_bytes, text, font_name, font_size,
             for dy in range(-border, border + 1):
                 if abs(dx) + abs(dy) <= border + 1:
                     draw.text((x+dx, y+dy), ln, font=font, fill=sc)
-        draw.text((x, y), ln, font=font, fill=tc)
+
+        cur_x = x
+        for char in ln:
+            if emoji_pattern.match(char) and emoji_font:
+                draw.text((cur_x, y), char, font=emoji_font, fill=(255,255,255,255), embedded_color=True)
+                try:
+                    bbox = draw.textbbox((cur_x, y), char, font=emoji_font)
+                    cur_x += bbox[2] - bbox[0]
+                except:
+                    cur_x += font_size
+            else:
+                draw.text((cur_x, y), char, font=font, fill=tc)
+                try:
+                    bbox = draw.textbbox((cur_x, y), char, font=font)
+                    cur_x += bbox[2] - bbox[0]
+                except:
+                    cur_x += font_size // 2
+
         y += font_size + 14
 
     return img
