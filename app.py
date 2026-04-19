@@ -98,9 +98,10 @@ if st.session_state.activated_code is None:
         else:
             st.error("❌ الكود غير صحيح")
     st.divider()
-    st.markdown("### 🛒 احصل على كود تفعيل")
+    st.markdown("**باقة صغيرة** — 10 توليدات مقابل **5 ريال**")
     st.markdown("**باقة شهرية** — 30 توليد يومياً مقابل **39 ريال/شهر**")
-st.markdown("**باقة احترافية** — 100 توليد يومياً مقابل **79 ريال/شهر**")
+    st.markdown("**باقة احترافية** — 100 توليد يومياً مقابل **79 ريال/شهر**")
+    st.link_button("🛒 اشترِ الآن", "https://salla.sa/mawjatalsamt/category/lRlwoA", use_container_width=True)
     st.link_button("🛒 اشترِ الآن", "https://salla.sa/mawjatalsamt/category/lRlwoA", use_container_width=True)
 
 else:
