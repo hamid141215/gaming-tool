@@ -1,2 +1,6 @@
 streamlit
 anthropic
+Pillow
+requests
+arabic-reshaper
+python-bidi
