@@ -3,9 +3,17 @@ import anthropic
 
 st.set_page_config(page_title="مولّد محتوى الألعاب", page_icon="🎮", layout="centered")
 
+st.markdown("""
+    <style>
+    * { direction: rtl; text-align: right; }
+    .stTextInput input { direction: rtl; text-align: right; }
+    .stSelectbox div { direction: rtl; text-align: right; }
+    .stButton button { width: 100%; }
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("🎮 مولّد عناوين وأوصاف يوتيوب للألعاب")
 st.markdown("أداة ذكاء اصطناعي لمنشئي محتوى الألعاب السعوديين")
-
 st.divider()
 
 video_title = st.text_input("📹 عنوان الفيديو المؤقت أو فكرته")
