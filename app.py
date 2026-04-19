@@ -7,13 +7,23 @@ from PIL import Image, ImageDraw, ImageFont
 import io
 import os
 
-st.set_page_config(page_title="مولّد محتوى الألعاب", page_icon="🎮", layout="centered")
+st.set_page_config(page_title="مولّد محتوى الألعاب", page_icon="🎮", layout="wide")
 
 st.markdown("""
     <style>
-    * { direction: rtl; text-align: right; }
+    * { direction: rtl; text-align: right; font-family: 'Segoe UI', sans-serif; }
     .stTextInput input { direction: rtl; text-align: right; }
     .stSelectbox div { direction: rtl; text-align: right; }
+    .stSlider { direction: ltr; }
+    div[data-testid="stHorizontalBlock"] { align-items: flex-start; }
+    .color-btn { 
+        width: 100%; padding: 12px; border-radius: 10px; border: none;
+        font-size: 15px; font-weight: bold; cursor: pointer; margin: 4px 0;
+    }
+    @media (max-width: 768px) {
+        .stButton button { min-height: 50px; font-size: 16px; }
+        .stSlider { padding: 8px 0; }
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -21,6 +31,23 @@ CODES = {
     "GAME5":  {"type": "limited",   "limit": 10,  "price": "5 ريال"},
     "GAME39": {"type": "unlimited", "limit": 30,  "price": "39 ريال/شهر"},
     "GAME79": {"type": "unlimited", "limit": 100, "price": "79 ريال/شهر"},
+}
+
+FONTS = {
+    "Amiri (كلاسيكي)":   "Amiri-Bold.ttf",
+    "Arabtype (عريض)":    "arabtype.ttf",
+    "Tradbdo (تراثي)":    "tradbdo.ttf",
+    "Garabd (رسمي)":      "GARABD.TTF",
+    "Naskh (نسخ)":        "DTNASKH1.TTF",
+}
+
+COLOR_PRESETS = {
+    "⚡ أصفر ألعاب":   ("#FFD700", "#000000"),
+    "🔥 أبيض ناصع":   ("#FFFFFF", "#000000"),
+    "💥 أحمر نار":    ("#FF3333", "#000000"),
+    "🌊 أزرق نيون":   ("#00CFFF", "#003366"),
+    "💚 أخضر نيون":   ("#39FF14", "#003300"),
+    "🟠 برتقالي":     ("#FF8C00", "#000000"),
 }
 
 if "remaining"      not in st.session_state: st.session_state.remaining = 0
@@ -32,19 +59,22 @@ if "last_result"    not in st.session_state: st.session_state.last_result = ""
 if "main_title"     not in st.session_state: st.session_state.main_title = ""
 if "thumb_created"  not in st.session_state: st.session_state.thumb_created = False
 if "uploaded_bytes" not in st.session_state: st.session_state.uploaded_bytes = None
+if "text_color"     not in st.session_state: st.session_state.text_color = "#FFD700"
+if "shadow_color"   not in st.session_state: st.session_state.shadow_color = "#000000"
 
 if st.session_state.last_date != str(date.today()):
     st.session_state.daily_count = 0
     st.session_state.last_date   = str(date.today())
 
-FONT_PATH = os.path.join(os.path.dirname(__file__), "Amiri-Bold.ttf")
+BASE_DIR = os.path.dirname(__file__)
 
 def hex_to_rgb(hex_color):
     hex_color = hex_color.lstrip("#")
     return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
-def add_text_to_image(image_bytes, text, font_size, text_color,
-                      shadow_color, position, bg_opacity, text_align):
+def add_text_to_image(image_bytes, text, font_name, font_size,
+                      text_color, shadow_color, position,
+                      bg_opacity, text_align):
     img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
     w, h = img.size
 
@@ -56,17 +86,22 @@ def add_text_to_image(image_bytes, text, font_size, text_color,
     else:
         zone_y = 10
 
-    overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    draw_ov = ImageDraw.Draw(overlay)
-    draw_ov.rectangle(
-        [(0, zone_y), (w, zone_y + zone_h)],
-        fill=(0, 0, 0, int(bg_opacity * 255))
-    )
-    img = Image.alpha_composite(img, overlay).convert("RGB")
+    if bg_opacity > 0:
+        overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        draw_ov = ImageDraw.Draw(overlay)
+        draw_ov.rectangle(
+            [(0, zone_y), (w, zone_y + zone_h)],
+            fill=(0, 0, 0, int(bg_opacity * 255))
+        )
+        img = Image.alpha_composite(img, overlay)
+
+    img = img.convert("RGB")
     draw = ImageDraw.Draw(img)
 
+    font_file = FONTS.get(font_name, "Amiri-Bold.ttf")
+    font_path = os.path.join(BASE_DIR, font_file)
     try:
-        font = ImageFont.truetype(FONT_PATH, font_size)
+        font = ImageFont.truetype(font_path, font_size)
     except:
         font = ImageFont.load_default(size=font_size)
 
@@ -83,13 +118,17 @@ def add_text_to_image(image_bytes, text, font_size, text_color,
     if line: lines.append(line)
     lines = lines[:3]
 
-    total_h = len(lines) * (font_size + 12)
+    reshaped = []
+    for ln in lines:
+        reshaped.append(get_display(arabic_reshaper.reshape(ln)))
+
+    total_h = len(reshaped) * (font_size + 14)
     y = zone_y + max(0, (zone_h - total_h) // 2)
     tc = hex_to_rgb(text_color)
     sc = hex_to_rgb(shadow_color)
+    border = max(3, font_size // 10)
 
-    for ln in lines:
-        ln = get_display(arabic_reshaper.reshape(ln))
+    for ln in reshaped:
         try:
             bbox = draw.textbbox((0, 0), ln, font=font)
             tw = bbox[2] - bbox[0]
@@ -103,11 +142,26 @@ def add_text_to_image(image_bytes, text, font_size, text_color,
         else:
             x = 20
 
-        draw.text((x+2, y+2), ln, font=font, fill=sc)
-        draw.text((x, y),     ln, font=font, fill=tc)
-        y += font_size + 12
+        for dx in range(-border, border + 1):
+            for dy in range(-border, border + 1):
+                if abs(dx) + abs(dy) <= border + 1:
+                    draw.text((x+dx, y+dy), ln, font=font, fill=sc)
+
+        draw.text((x, y), ln, font=font, fill=tc)
+        y += font_size + 14
 
     return img
+
+def render_thumbnail(image_bytes, text, font_name, font_size,
+                     text_color, shadow_color, position,
+                     bg_opacity, text_align):
+    result = add_text_to_image(image_bytes, text, font_name, font_size,
+                               text_color, shadow_color, position,
+                               bg_opacity, text_align)
+    buf = io.BytesIO()
+    result.save(buf, format="PNG")
+    buf.seek(0)
+    return result, buf
 
 def extract_main_title(result):
     lines = result.split("\n")
@@ -118,15 +172,6 @@ def extract_main_title(result):
                 if clean and len(clean) > 5:
                     return clean
     return ""
-
-def render_thumbnail(image_bytes, text, font_size, text_color,
-                     shadow_color, position, bg_opacity, text_align):
-    result = add_text_to_image(image_bytes, text, font_size, text_color,
-                               shadow_color, position, bg_opacity, text_align)
-    buf = io.BytesIO()
-    result.save(buf, format="PNG")
-    buf.seek(0)
-    return result, buf
 
 st.title("🎮 مولّد محتوى الألعاب")
 st.markdown("عناوين وأوصاف يوتيوب + ثمبيل احترافي")
@@ -232,45 +277,75 @@ else:
         uploaded = st.file_uploader("ارفع صورة الثمبيل", type=["jpg","jpeg","png"])
         if uploaded:
             st.session_state.uploaded_bytes = uploaded.read()
+            st.session_state.thumb_created  = False
 
         default_text = st.session_state.main_title if st.session_state.main_title else ""
         thumb_text = st.text_input("✏️ النص على الثمبيل",
                                    value=default_text,
                                    placeholder="ولّد عنواناً أولاً أو اكتب نصاً هنا")
 
-        if st.session_state.uploaded_bytes and thumb_text:
-            if not st.session_state.thumb_created:
-                if st.button("🖼️ أنشئ الثمبيل", use_container_width=True):
-                    st.session_state.thumb_created = True
-                    st.rerun()
+        if st.session_state.uploaded_bytes and thumb_text and not st.session_state.thumb_created:
+            if st.button("🖼️ أنشئ الثمبيل", use_container_width=True):
+                st.session_state.thumb_created = True
+                st.rerun()
 
         if st.session_state.thumb_created and st.session_state.uploaded_bytes and thumb_text:
             st.divider()
-            st.markdown("#### ⚙️ تعديل مباشر على الثمبيل")
 
-            col1, col2 = st.columns(2)
-            with col1:
-                font_size  = st.slider("حجم الخط", 20, 120, 48, step=4)
-                position   = st.selectbox("موضع النص", ["أسفل", "وسط", "أعلى"])
-                text_align = st.selectbox("محاذاة النص", ["وسط", "يمين", "يسار"])
-            with col2:
-                text_color   = st.color_picker("لون النص",        "#FFFFFF")
-                shadow_color = st.color_picker("لون الظل",        "#000000")
-                bg_opacity   = st.slider("شفافية الخلفية", 0.0, 1.0, 0.7, step=0.05)
+            left_col, right_col = st.columns([1, 1])
 
-            try:
-                result_img, buf = render_thumbnail(
-                    st.session_state.uploaded_bytes,
-                    thumb_text, font_size, text_color,
-                    shadow_color, position, bg_opacity, text_align
-                )
-                st.image(result_img, caption="معاينة مباشرة", use_column_width=True)
-                st.download_button("⬇️ حمّل الثمبيل", buf,
-                                   file_name="thumbnail.png", mime="image/png",
-                                   use_container_width=True)
-            except Exception as e:
-                st.error(f"خطأ: {str(e)}")
+            with right_col:
+                st.markdown("#### ⚙️ أدوات التعديل")
 
+                font_name  = st.selectbox("🔤 الخط", list(FONTS.keys()))
+                font_size  = st.slider("📏 حجم الخط", 60, 300, 120, step=4)
+                position   = st.selectbox("📍 موضع النص", ["أسفل", "وسط", "أعلى"])
+                text_align = st.selectbox("↔️ محاذاة", ["وسط", "يمين", "يسار"])
+                bg_opacity = st.slider("🌫️ شفافية الخلفية", 0.0, 1.0, 0.0, step=0.05)
+
+                st.markdown("**🎨 ألوان جاهزة**")
+                cols = st.columns(3)
+                for i, (name, (tc, sc)) in enumerate(COLOR_PRESETS.items()):
+                    with cols[i % 3]:
+                        if st.button(name, use_container_width=True, key=f"color_{i}"):
+                            st.session_state.text_color   = tc
+                            st.session_state.shadow_color = sc
+                            st.rerun()
+
+                st.markdown("**🖌️ لون مخصص**")
+                c1, c2 = st.columns(2)
+                with c1:
+                    text_color = st.color_picker("النص", st.session_state.text_color)
+                with c2:
+                    shadow_color = st.color_picker("الظل", st.session_state.shadow_color)
+
+                if text_color != st.session_state.text_color:
+                    st.session_state.text_color = text_color
+                if shadow_color != st.session_state.shadow_color:
+                    st.session_state.shadow_color = shadow_color
+
+            with left_col:
+                st.markdown("#### 👁️ معاينة مباشرة")
+                try:
+                    result_img, buf = render_thumbnail(
+                        st.session_state.uploaded_bytes,
+                        thumb_text, font_name, font_size,
+                        st.session_state.text_color,
+                        st.session_state.shadow_color,
+                        position, bg_opacity, text_align
+                    )
+                    st.image(result_img, use_column_width=True)
+                    st.download_button(
+                        "⬇️ حمّل الثمبيل الآن",
+                        buf,
+                        file_name="thumbnail.png",
+                        mime="image/png",
+                        use_container_width=True
+                    )
+                except Exception as e:
+                    st.error(f"خطأ: {str(e)}")
+
+            st.divider()
             if st.button("🔁 ارفع صورة جديدة", use_container_width=True):
                 st.session_state.thumb_created  = False
                 st.session_state.uploaded_bytes = None
