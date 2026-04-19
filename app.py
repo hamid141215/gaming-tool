@@ -287,7 +287,6 @@ else:
         if st.session_state.uploaded_bytes and thumb_text and not st.session_state.thumb_created:
             if st.button("🖼️ أنشئ الثمبيل", use_container_width=True):
                 st.session_state.thumb_created = True
-                st.rerun()
 
         if st.session_state.thumb_created and st.session_state.uploaded_bytes and thumb_text:
             st.divider()
