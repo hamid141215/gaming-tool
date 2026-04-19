@@ -1,4 +1,6 @@
 import streamlit as st
+import arabic_reshaper
+from bidi.algorithm import get_display
 import anthropic
 from datetime import date
 from PIL import Image, ImageDraw, ImageFont
@@ -87,6 +89,7 @@ def add_text_to_image(image_bytes, text, font_size, text_color,
     sc = hex_to_rgb(shadow_color)
 
     for ln in lines:
+ln = get_display(arabic_reshaper.reshape(ln))
         try:
             bbox = draw.textbbox((0, 0), ln, font=font)
             tw = bbox[2] - bbox[0]
