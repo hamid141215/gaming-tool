@@ -35,7 +35,7 @@ if st.session_state.last_date != str(date.today()):
     st.session_state.daily_count = 0
     st.session_state.last_date   = str(date.today())
 
-FONT_PATH = os.path.join(os.path.dirname(__file__), "Candarab.ttf")
+FONT_PATH = os.path.join(os.path.dirname(__file__), "Amiri-Bold.ttf")
 
 def hex_to_rgb(hex_color):
     hex_color = hex_color.lstrip("#")
