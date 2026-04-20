@@ -194,17 +194,18 @@ def render_thumbnail():
     buf.seek(0)
     return result, buf
 
-def generate_ai_image(game_name, extra_desc=""):
+def generate_ai_image(game_name, extra_desc, style, mood, character):
     import urllib.parse
     prompt = (
-        f"YouTube gaming thumbnail for {game_name}. "
-        f"{extra_desc}. "
-        "Close-up face with exaggerated expression, dramatic lighting, "
-        "high contrast, vibrant colors, dark background, subject in center, "
-        "sharp focus, 4K quality, viral style, cinematic, no text."
+        f"YouTube gaming thumbnail. Game: {game_name}. "
+        f"Scene: {extra_desc}. "
+        f"Style: {style}. Mood: {mood}. "
+        f"Character: {character}. "
+        "Dramatic lighting, high contrast, vibrant colors, dark background, "
+        "sharp focus, 4K quality, cinematic, no text, no watermark."
     )
     encoded = urllib.parse.quote(prompt)
-    url = f"https://image.pollinations.ai/prompt/{encoded}?width=1792&height=1024&nologo=true"
+    url = f"https://image.pollinations.ai/prompt/{encoded}?width=1792&height=1024&nologo=true&seed={hash(prompt)%99999}"
     response = requests.get(url, timeout=60)
     if response.status_code == 200:
         return response.content
@@ -337,8 +338,40 @@ else:
                     st.session_state.thumb_created  = False
 
         else:
-            ai_game = st.text_input("🎮 اسم اللعبة للصورة", placeholder="مثال: Valorant")
-            ai_desc = st.text_input("✨ وصف إضافي (اختياري)", placeholder="مثال: لاعب يحتفل بالفوز")
+            ai_game = st.text_input("🎮 اسم اللعبة", placeholder="مثال: Valorant, FIFA, GTA")
+            ai_desc = st.text_input("🎬 وصف المشهد", placeholder="مثال: لاعب يحتفل بعد فوز مثير")
+
+            col1, col2 = st.columns(2)
+            with col1:
+                ai_style = st.selectbox("🎨 أسلوب الصورة", [
+                    "Realistic cinematic",
+                    "Anime style",
+                    "Dark dramatic",
+                    "Vibrant colorful",
+                    "Neon cyberpunk",
+                ])
+                ai_character = st.selectbox("🧑 الشخصية", [
+                    "Arabic gamer with headset",
+                    "Masked warrior",
+                    "Pro esports player",
+                    "Cartoon character",
+                    "No character - game scene only",
+                ])
+            with col2:
+                ai_mood = st.selectbox("😮 المزاج والتعبير", [
+                    "Shocked and surprised",
+                    "Excited and celebrating",
+                    "Angry and intense",
+                    "Confident and cool",
+                    "Scared and nervous",
+                ])
+                ai_bg = st.selectbox("🌆 الخلفية", [
+                    "Dark black background",
+                    "Game environment background",
+                    "Explosion and fire",
+                    "Stadium crowd",
+                    "Futuristic city",
+                ])
 
             if st.button("🤖 ولّد صورة بالذكاء الاصطناعي", use_container_width=True):
                 if not ai_game:
@@ -346,7 +379,8 @@ else:
                 else:
                     with st.spinner("جاري توليد الصورة... قد يستغرق 15-20 ثانية"):
                         try:
-                            img_bytes = generate_ai_image(ai_game, ai_desc)
+                            full_desc = f"{ai_desc}. Background: {ai_bg}"
+                            img_bytes = generate_ai_image(ai_game, full_desc, ai_style, ai_mood, ai_character)
                             st.session_state.uploaded_bytes = img_bytes
                             st.session_state.thumb_created  = False
                             st.success("تم توليد الصورة! ✅")
