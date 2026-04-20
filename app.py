@@ -256,6 +256,9 @@ if st.session_state.activated_code is None:
     st.link_button("🛒 اشترِ الآن", "https://salla.sa/mawjatalsamt/category/lRlwoA", use_container_width=True)
 
 else:
+    if st.session_state.activated_code not in CODES:
+        st.session_state.activated_code = None
+        st.rerun()
     code_info = CODES[st.session_state.activated_code]
     if st.session_state.code_type == "limited":
         st.info(f"💳 رصيدك المتبقي: **{st.session_state.remaining} توليد**")
