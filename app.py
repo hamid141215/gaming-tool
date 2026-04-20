@@ -2,10 +2,13 @@ import streamlit as st
 import arabic_reshaper
 from bidi.algorithm import get_display
 import anthropic
+from openai import OpenAI
 from datetime import date
 from PIL import Image, ImageDraw, ImageFont
 import io
 import os
+import re
+import requests
 
 st.set_page_config(page_title="مولّد محتوى الألعاب", page_icon="🎮", layout="wide")
 
@@ -36,11 +39,11 @@ FONTS = {
 }
 
 COLOR_PRESETS = {
-    "⚡ أصفر": ("#FFD700", "#000000"),
-    "🔥 أبيض": ("#FFFFFF", "#000000"),
-    "💥 أحمر":  ("#FF3333", "#000000"),
-    "🌊 أزرق":  ("#00CFFF", "#003366"),
-    "💚 أخضر":  ("#39FF14", "#003300"),
+    "⚡ أصفر":    ("#FFD700", "#000000"),
+    "🔥 أبيض":    ("#FFFFFF", "#000000"),
+    "💥 أحمر":    ("#FF3333", "#000000"),
+    "🌊 أزرق":    ("#00CFFF", "#003366"),
+    "💚 أخضر":    ("#39FF14", "#003300"),
     "🟠 برتقالي": ("#FF8C00", "#000000"),
 }
 
@@ -60,6 +63,8 @@ if "font_size"      not in st.session_state: st.session_state.font_size = 120
 if "position"       not in st.session_state: st.session_state.position = "أسفل"
 if "text_align"     not in st.session_state: st.session_state.text_align = "وسط"
 if "bg_opacity"     not in st.session_state: st.session_state.bg_opacity = 0.0
+if "thumb_text"     not in st.session_state: st.session_state.thumb_text = ""
+if "thumb_mode"     not in st.session_state: st.session_state.thumb_mode = "ارفع صورة"
 
 if st.session_state.last_date != str(date.today()):
     st.session_state.daily_count = 0
@@ -131,7 +136,6 @@ def add_text_to_image(image_bytes, text, font_name, font_size,
     except:
         emoji_font = None
 
-    import re
     emoji_pattern = re.compile("[\U00010000-\U0010ffff\U00002600-\U000027BF]", flags=re.UNICODE)
 
     for ln in reshaped:
@@ -169,7 +173,6 @@ def add_text_to_image(image_bytes, text, font_name, font_size,
                     cur_x += bbox[2] - bbox[0]
                 except:
                     cur_x += font_size // 2
-
         y += font_size + 14
 
     return img
@@ -190,6 +193,26 @@ def render_thumbnail():
     result.save(buf, format="PNG")
     buf.seek(0)
     return result, buf
+
+def generate_ai_image(game_name, extra_desc=""):
+    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+    prompt = (
+        f"YouTube gaming thumbnail for {game_name}. "
+        f"{extra_desc}. "
+        "Close-up face with exaggerated expression, dramatic lighting, "
+        "high contrast, vibrant colors, dark background, subject in center, "
+        "sharp focus, 4K quality, viral style, cinematic, no text."
+    )
+    response = client.images.generate(
+        model="dall-e-3",
+        prompt=prompt,
+        size="1792x1024",
+        quality="standard",
+        n=1,
+    )
+    image_url = response.data[0].url
+    img_bytes = requests.get(image_url).content
+    return img_bytes
 
 def extract_main_title(result):
     lines = result.split("\n")
@@ -302,12 +325,36 @@ else:
         if st.session_state.main_title:
             st.success(f"✅ العنوان المولّد: {st.session_state.main_title}")
 
-        uploaded = st.file_uploader("ارفع صورة الثمبيل", type=["jpg","jpeg","png"])
-        if uploaded:
-            new_bytes = uploaded.read()
-            if new_bytes != st.session_state.uploaded_bytes:
-                st.session_state.uploaded_bytes = new_bytes
-                st.session_state.thumb_created  = False
+        st.session_state.thumb_mode = st.radio(
+            "اختر طريقة الصورة",
+            ["ارفع صورة", "ولّد صورة بالذكاء الاصطناعي"],
+            horizontal=True
+        )
+
+        if st.session_state.thumb_mode == "ارفع صورة":
+            uploaded = st.file_uploader("ارفع صورة الثمبيل", type=["jpg","jpeg","png"])
+            if uploaded:
+                new_bytes = uploaded.read()
+                if new_bytes != st.session_state.uploaded_bytes:
+                    st.session_state.uploaded_bytes = new_bytes
+                    st.session_state.thumb_created  = False
+
+        else:
+            ai_game = st.text_input("🎮 اسم اللعبة للصورة", placeholder="مثال: Valorant")
+            ai_desc = st.text_input("✨ وصف إضافي (اختياري)", placeholder="مثال: لاعب يحتفل بالفوز")
+
+            if st.button("🤖 ولّد صورة بالذكاء الاصطناعي", use_container_width=True):
+                if not ai_game:
+                    st.error("أدخل اسم اللعبة")
+                else:
+                    with st.spinner("جاري توليد الصورة... قد يستغرق 15-20 ثانية"):
+                        try:
+                            img_bytes = generate_ai_image(ai_game, ai_desc)
+                            st.session_state.uploaded_bytes = img_bytes
+                            st.session_state.thumb_created  = False
+                            st.success("تم توليد الصورة! ✅")
+                        except Exception as e:
+                            st.error(f"خطأ في توليد الصورة: {str(e)}")
 
         default_text = st.session_state.main_title if st.session_state.main_title else ""
         thumb_text = st.text_input("✏️ النص على الثمبيل",
@@ -382,15 +429,15 @@ else:
                     st.error(f"خطأ: {str(e)}")
 
             st.divider()
-            if st.button("🔁 ارفع صورة جديدة", use_container_width=True):
+            if st.button("🔁 ابدأ من جديد", use_container_width=True):
                 st.session_state.thumb_created  = False
                 st.session_state.uploaded_bytes = None
                 st.rerun()
 
         elif st.session_state.uploaded_bytes and not thumb_text:
-            st.info("ولّد عنواناً من التبويب الأول أو اكتب نصاً يدوياً")
+            st.info("اكتب النص الذي تريده على الثمبيل")
         elif not st.session_state.uploaded_bytes:
-            st.info("ارفع صورة أولاً لإنشاء الثمبيل")
+            st.info("ارفع صورة أو ولّد صورة بالذكاء الاصطناعي أولاً")
 
     st.divider()
     if st.button("🔄 تغيير الكود", use_container_width=True):
