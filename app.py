@@ -2,7 +2,6 @@ import streamlit as st
 import arabic_reshaper
 from bidi.algorithm import get_display
 import anthropic
-from openai import OpenAI
 from datetime import date
 from PIL import Image, ImageDraw, ImageFont
 import io
@@ -25,6 +24,35 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
+
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json"
+}
+
+def is_code_used(code):
+    try:
+        r = requests.get(
+            f"{SUPABASE_URL}/rest/v1/used_codes?code=eq.{code}",
+            headers=HEADERS, timeout=5
+        )
+        return len(r.json()) > 0
+    except:
+        return False
+
+def mark_code_used(code, plan):
+    try:
+        requests.post(
+            f"{SUPABASE_URL}/rest/v1/used_codes",
+            headers=HEADERS,
+            json={"code": code, "plan": plan},
+            timeout=5
+        )
+    except:
+        pass
 
 def load_codes():
     codes = {}
@@ -237,18 +265,21 @@ st.divider()
 
 if st.session_state.activated_code is None:
     st.subheader("🔑 أدخل كود التفعيل")
-    input_code = st.text_input("الكود", placeholder="مثال: GAME5")
+    input_code = st.text_input("الكود", placeholder="مثال: S5-XXXXXXXX")
     if st.button("✅ تفعيل", use_container_width=True):
         code = input_code.strip().upper()
-        if code in CODES:
+        if code not in CODES:
+            st.error("❌ الكود غير صحيح")
+        elif is_code_used(code):
+            st.error("❌ هذا الكود تم استخدامه مسبقاً — اشترِ باقة جديدة")
+        else:
+            mark_code_used(code, CODES[code]["price"])
             st.session_state.activated_code = code
             st.session_state.code_type      = CODES[code]["type"]
             st.session_state.remaining      = CODES[code]["limit"]
             st.session_state.daily_count    = 0
             st.success(f"✅ تم التفعيل! باقة {CODES[code]['price']}")
             st.rerun()
-        else:
-            st.error("❌ الكود غير صحيح")
     st.divider()
     st.markdown("**باقة صغيرة** — 10 توليدات مقابل **5 ريال**")
     st.markdown("**باقة شهرية** — 30 توليد يومياً مقابل **39 ريال/شهر**")
@@ -348,7 +379,6 @@ else:
                 if new_bytes != st.session_state.uploaded_bytes:
                     st.session_state.uploaded_bytes = new_bytes
                     st.session_state.thumb_created  = False
-
         else:
             ai_game = st.text_input("🎮 اسم اللعبة", placeholder="مثال: Valorant, FIFA, GTA")
             ai_desc = st.text_input("🎬 وصف المشهد", placeholder="مثال: لاعب يحتفل بعد فوز مثير")
@@ -415,7 +445,6 @@ else:
 
             with right_col:
                 st.markdown("#### ⚙️ أدوات التعديل")
-
                 st.session_state.font_name = st.selectbox(
                     "🔤 الخط", list(FONTS.keys()),
                     index=list(FONTS.keys()).index(st.session_state.font_name)
