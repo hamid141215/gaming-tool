@@ -33,22 +33,46 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-def is_code_used(code):
+def get_code_data(code):
     try:
         r = requests.get(
             f"{SUPABASE_URL}/rest/v1/used_codes?code=eq.{code}",
             headers=HEADERS, timeout=5
         )
-        return len(r.json()) > 0
+        data = r.json()
+        return data[0] if data else None
     except:
-        return False
+        return None
 
-def mark_code_used(code, plan):
+def activate_code(code, plan, limit):
+    today = str(date.today())
     try:
         requests.post(
             f"{SUPABASE_URL}/rest/v1/used_codes",
             headers=HEADERS,
-            json={"code": code, "plan": plan},
+            json={
+                "code": code,
+                "plan": plan,
+                "remaining": limit,
+                "daily_count": 0,
+                "last_date": today
+            },
+            timeout=5
+        )
+    except:
+        pass
+
+def update_code_usage(code, code_type, remaining, daily_count):
+    today = str(date.today())
+    try:
+        requests.patch(
+            f"{SUPABASE_URL}/rest/v1/used_codes?code=eq.{code}",
+            headers={**HEADERS, "Prefer": "return=minimal"},
+            json={
+                "remaining": remaining,
+                "daily_count": daily_count,
+                "last_date": today
+            },
             timeout=5
         )
     except:
@@ -270,16 +294,30 @@ if st.session_state.activated_code is None:
         code = input_code.strip().upper()
         if code not in CODES:
             st.error("❌ الكود غير صحيح")
-        elif is_code_used(code):
-            st.error("❌ هذا الكود تم استخدامه مسبقاً — اشترِ باقة جديدة")
         else:
-            mark_code_used(code, CODES[code]["price"])
-            st.session_state.activated_code = code
-            st.session_state.code_type      = CODES[code]["type"]
-            st.session_state.remaining      = CODES[code]["limit"]
-            st.session_state.daily_count    = 0
-            st.success(f"✅ تم التفعيل! باقة {CODES[code]['price']}")
-            st.rerun()
+            code_data = get_code_data(code)
+            today = str(date.today())
+            if code_data:
+                code_info_temp = CODES[code]
+                if code_info_temp["type"] == "limited" and code_data["remaining"] <= 0:
+                    st.error("❌ هذا الكود نفد رصيده — اشترِ باقة جديدة")
+                else:
+                    daily = code_data["daily_count"] if code_data["last_date"] == today else 0
+                    st.session_state.activated_code = code
+                    st.session_state.code_type      = code_info_temp["type"]
+                    st.session_state.remaining      = code_data["remaining"]
+                    st.session_state.daily_count    = daily
+                    st.success(f"✅ تم التفعيل! باقة {code_info_temp['price']}")
+                    st.rerun()
+            else:
+                info = CODES[code]
+                activate_code(code, info["price"], info["limit"])
+                st.session_state.activated_code = code
+                st.session_state.code_type      = info["type"]
+                st.session_state.remaining      = info["limit"]
+                st.session_state.daily_count    = 0
+                st.success(f"✅ تم التفعيل! باقة {info['price']}")
+                st.rerun()
     st.divider()
     st.markdown("**باقة صغيرة** — 10 توليدات مقابل **5 ريال**")
     st.markdown("**باقة شهرية** — 30 توليد يومياً مقابل **39 ريال/شهر**")
@@ -344,6 +382,12 @@ else:
                             st.session_state.remaining -= 1
                         else:
                             st.session_state.daily_count += 1
+                        update_code_usage(
+                            st.session_state.activated_code,
+                            st.session_state.code_type,
+                            st.session_state.remaining,
+                            st.session_state.daily_count
+                        )
 
                         st.success("تم التوليد بنجاح! ✅")
                         st.markdown(result)
