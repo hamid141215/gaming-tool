@@ -3,3 +3,5 @@ anthropic
 Pillow
 arabic-reshaper
 python-bidi
+openai
+requests
