@@ -195,7 +195,7 @@ def render_thumbnail():
     return result, buf
 
 def generate_ai_image(game_name, extra_desc=""):
-    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+    import urllib.parse
     prompt = (
         f"YouTube gaming thumbnail for {game_name}. "
         f"{extra_desc}. "
@@ -203,16 +203,13 @@ def generate_ai_image(game_name, extra_desc=""):
         "high contrast, vibrant colors, dark background, subject in center, "
         "sharp focus, 4K quality, viral style, cinematic, no text."
     )
-    response = client.images.generate(
-        model="dall-e-3",
-        prompt=prompt,
-        size="1792x1024",
-        quality="standard",
-        n=1,
-    )
-    image_url = response.data[0].url
-    img_bytes = requests.get(image_url).content
-    return img_bytes
+    encoded = urllib.parse.quote(prompt)
+    url = f"https://image.pollinations.ai/prompt/{encoded}?width=1792&height=1024&nologo=true"
+    response = requests.get(url, timeout=60)
+    if response.status_code == 200:
+        return response.content
+    else:
+        raise Exception("فشل توليد الصورة — حاول مرة أخرى")
 
 def extract_main_title(result):
     lines = result.split("\n")
