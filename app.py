@@ -26,11 +26,20 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-CODES = {
-    "GAME5":  {"type": "limited",   "limit": 10,  "price": "5 ريال"},
-    "GAME39": {"type": "unlimited", "limit": 30,  "price": "39 ريال/شهر"},
-    "GAME79": {"type": "unlimited", "limit": 100, "price": "79 ريال/شهر"},
-}
+def load_codes():
+    codes = {}
+    for line in st.secrets.get("CODES_SMALL", "").strip().split("\n"):
+        c = line.strip()
+        if c: codes[c] = {"type": "limited", "limit": 10, "price": "5 ريال"}
+    for line in st.secrets.get("CODES_MONTHLY", "").strip().split("\n"):
+        c = line.strip()
+        if c: codes[c] = {"type": "unlimited", "limit": 30, "price": "39 ريال/شهر"}
+    for line in st.secrets.get("CODES_PRO", "").strip().split("\n"):
+        c = line.strip()
+        if c: codes[c] = {"type": "unlimited", "limit": 100, "price": "79 ريال/شهر"}
+    return codes
+
+CODES = load_codes()
 
 FONTS = {
     "Amiri (كلاسيكي)": "Amiri-Bold.ttf",
